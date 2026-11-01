@@ -1,0 +1,92 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://pyscript.net/releases/2026.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2026.1.1/core.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 500px; margin: auto; text-align: center; font-size: 20px; }
+        h1 { font-size: 36px; margin-bottom: 10px; }
+        textarea { width: 100%; height: 120px; font-size: 18px; margin-bottom: 15px; padding: 10px; box-sizing: border-box; border: 2px solid #ccc; border-radius: 8px; line-height: 1.5; }
+        button { font-size: 20px; padding: 12px 20px; background-color: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; margin: 5px; width: 90%; }
+        button.save-btn { background-color: #4CAF50; }
+        button:hover { opacity: 0.8; }
+        #output { font-size: 32px; font-weight: bold; color: #e74c3c; margin-top: 20px; line-height: 1.5; }
+        #status { font-size: 16px; color: #4CAF50; height: 20px; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <h1>今天吃什么</h1>
+    <p>✏️ 在下方编辑你的菜单（格式：分类:菜1,菜2）：</p>
+    
+    <textarea id="menu_input" placeholder="在这里输入菜单..."></textarea>
+    
+    <div>
+        <button id="save-btn" class="save-btn">💾 保存我的菜单</button>
+        <button id="go-btn">🎲 帮我选一个！</button>
+    </div>
+
+    <div id="status"></div>
+    <div id="output">等待选择...</div>
+
+    <script type="py">
+import random
+from pyscript import document, window
+from pyodide.ffi import create_proxy
+
+default_menu = "食堂:轻食,烤鸭饭,烤盘饭,重庆小面\n外卖:擂饭,打抛饭,越南法棍,肠粉"
+
+menu_textarea = document.querySelector("#menu_input")
+save_btn = document.querySelector("#save-btn")
+go_btn = document.querySelector("#go-btn")
+
+def load_menu(event=None):
+    saved_menu = window.localStorage.getItem("my_custom_menu")
+    menu_textarea.value = saved_menu if saved_menu else default_menu
+
+def save_menu(event=None):
+    text = menu_textarea.value
+    window.localStorage.setItem("my_custom_menu", text)
+    document.querySelector("#status").innerHTML = "✅ 菜单已保存！"
+    window.setTimeout("document.querySelector('#status').innerHTML = ''", 2000)
+
+def choose_food(event=None):
+    text = menu_textarea.value
+    lines = [line.strip() for line in text.split('\n') if line.strip() != ""]
+    
+    if len(lines) == 0:
+        document.querySelector("#output").innerHTML = "❌ 菜单是空的！"
+        return
+
+    if ":" in lines[0] or "：" in lines[0]:
+        places = []
+        items = {}
+        for line in lines:
+            if ":" in line:
+                place, food_list = line.split(":", 1)
+            elif "：" in line:
+                place, food_list = line.split("：", 1)
+            else:
+                continue
+            
+            place = place.strip()
+            places.append(place)
+            items[place] = [f.strip() for f in food_list.replace("，", ",").split(",") if f.strip()]
+
+        p = random.choice(places)
+        e = random.choice(items[p])
+        result_html = f"今天吃：{p}<br>👉 {e}！"
+    else:
+        result = random.choice(lines)
+        result_html = f"👉 去吃：{result}！"
+
+    document.querySelector("#output").innerHTML = result_html
+
+save_btn.addEventListener("click", create_proxy(save_menu))
+go_btn.addEventListener("click", create_proxy(choose_food))
+
+load_menu()
+    </script>
+</body>
+</html>
